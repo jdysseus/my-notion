@@ -1,7 +1,8 @@
+// components/Inbox.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
@@ -11,7 +12,7 @@ interface Task {
   title: string;
   description?: string;
   createdAt: Date;
-  status: string;
+  status: 'pending' | 'completed' | 'in-progress';
 }
 
 export default function Inbox() {
@@ -23,8 +24,10 @@ export default function Inbox() {
     const fetchTasks = async () => {
       try {
         const tasksCollection = collection(db, 'tasks');
-        const tasksSnapshot = await getDocs(tasksCollection);
-        const tasksList = tasksSnapshot.docs.map(doc => ({
+        const tasksQuery = query(tasksCollection, orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(tasksQuery);
+        
+        const tasksList = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate() || new Date(),
@@ -46,40 +49,64 @@ export default function Inbox() {
   };
 
   if (loading) {
-    return <div className="p-4">Loading tasks...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="text-gray-800 font-medium">Loading tasks...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="grid gap-4 p-4">
-      <h2 className="text-2xl font-bold mb-4">Inbox Tasks</h2>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {tasks.map((task) => (
-          <Card 
-            key={task.id}
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handleTaskClick(task.id)}
-          >
-            <CardHeader>
-              <CardTitle className="text-lg">{task.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">{task.description}</p>
-              <div className="mt-2 flex justify-between items-center">
-                <span className="text-xs text-gray-500">
-                  {task.createdAt.toLocaleDateString()}
-                </span>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                  task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {task.status}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900">📥 Inbox</h1>
+        <span className="text-sm font-medium text-gray-700">{tasks.length} tasks</span>
       </div>
+      
+      {tasks.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-800 font-medium">No tasks yet. Start adding some!</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {tasks.map((task) => (
+            <Card 
+              key={task.id}
+              className="cursor-pointer hover:shadow-lg transition-all duration-200 bg-white border-gray-200 hover:border-gray-300 hover:-translate-y-0.5"
+              onClick={() => handleTaskClick(task.id)}
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
+                  {task.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {task.description && (
+                  <p className="text-sm text-gray-800 mb-4 line-clamp-3 font-normal">
+                    {task.description}
+                  </p>
+                )}
+                <div className="flex justify-between items-center text-xs mt-2">
+                  <span className="text-gray-700 font-medium">
+                    {task.createdAt.toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </span>
+                  <span className={`px-3 py-1.5 rounded-full font-semibold ${
+                    task.status === 'completed' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                    task.status === 'in-progress' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                    'bg-amber-100 text-amber-700 border border-amber-200'
+                  }`}>
+                    {task.status}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
-} 
+}
