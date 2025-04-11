@@ -1,7 +1,12 @@
+import LoginButton from '@/components/LoginButton';
+
 export default function Home() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-blue-500 text-white text-2xl">
-      Tailwind 적용됨! 🎉
-    </div>
+    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+      <div className="flex flex-col items-center gap-4">
+        <h1 className="text-4xl font-bold">테스트 페이지</h1>
+        <LoginButton />
+      </div>
+    </main>
   );
 }
